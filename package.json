@@ -1,0 +1,16 @@
+{
+  "name": "pingwebsite",
+  "version": "1.0.0",
+  "description": "检测网站是否正常运行",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@alicloud/pop-core": "^1.7.9",
+    "@types/node": "^13.9.0",
+    "axios": "^0.19.2"
+  }
+}
