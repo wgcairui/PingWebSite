@@ -29,7 +29,7 @@ const requestOption = {
 export const AddSmsSign = () => {
     const params = {
         "RegionId": "cn-hangzhou",
-        "SignName": "湖北雷迪司科技",
+        "SignName": "雷迪司科技湖北有限公司",
         "SignSource": 1,
         "Remark": "用于监测我司官网主机是否在线，离线发送告警短信"
     }
@@ -47,7 +47,7 @@ export const AddSmsSign = () => {
 export const QuerySmsSign = () => {
     const params = {
         "RegionId": "cn-hangzhou",
-        "SignName": "湖北雷迪司科技"
+        "SignName": "雷迪司科技湖北有限公司"
     }
     client.request('QuerySmsSign', params, requestOption).then((result) => {
         console.log({ QuerySmsSign: result });
@@ -88,17 +88,27 @@ export const QuerySmsTemplate = () => {
 }
 
 // 单条发送短信
-export const SendSms = async (tels: string, sitename: string) => {
+type alarmType = "error" | "success"
+export const SendSms = async (tels: string, sitename: string, type: alarmType) => {
+    const smsCode = {
+        success: "SMS_185846200",
+        error: "SMS_185820818"
+    }
     const time = new Date().toLocaleString()
+    const TemplateParam = JSON.stringify({ sitename: `[${sitename}]`, time })
+    console.log(TemplateParam);
+    
     const params = {
         "RegionId": "cn-hangzhou",
         "PhoneNumbers": tels,
-        "SignName": "湖北雷迪司科技",
-        "TemplateCode": "网站下线提醒",
-        "TemplateParam": { sitename, time }
+        "SignName": "雷迪司科技湖北有限公司",
+        "TemplateCode": smsCode[type],
+        TemplateParam
     }
 
     const result: SmsResult = await client.request('SendSms', params, requestOption)
+    console.log(result);
+
     if (result.Code === "OK") {
         return true
     } else {

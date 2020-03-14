@@ -3,45 +3,63 @@ import { SendSms } from "./send";
 
 interface Sites {
     Url: string,
+    UrlName: string
     timeOutNum: number
-    timeOutSec: number
+    tels: string[]
 }
 const TimeOutInfo: Map<string, number> = new Map()
 const IntervalInfo: Map<string, NodeJS.Timeout> = new Map()
 const SendInfo: Map<string, number> = new Map()
-const tels = ["15337364316"]
 const WebSites: Sites[] = [{
-    Url: "http://www.ladis.com.cn",
+    Url: "http://www.ladishb.com",
+    UrlName: "湖北雷迪司网站",
     timeOutNum: 5,
-    timeOutSec: 60
+    tels: ["15337364316"]
+},{
+    Url:"http://www.ladis.com.cn",
+    UrlName:"雷迪司官网",
+    timeOutNum:5,
+    tels:["17371676835","13705817726"]
 }]
 
 
 
-function InterValPing(Url: string, timeOutNum: number, timeOutSec: number) {
+// 每分钟沦陷get，计数${timeOutNum}次发送一次告警短信，告警短信发送两次之后停止发送，恢复连接之后发送短信提醒
+function InterValPing(Info: Sites) {
+    const { Url, tels } = Info
+    console.log(`注册 ${Url} 监听`);
     TimeOutInfo.set(Url, 0)
     SendInfo.set(Url, 0)
     const Inter = setInterval(() => {
-        axios.get(Url, { timeout: timeOutSec }).then(() => {
+        axios.get(Url).then(() => {
+            console.log(`连接网址${Url} Success`);
+            if (SendInfo.get(Url) as number > 0) SendSms(tels.join(","), Info.UrlName, "success")
             // 网络联通，清除缓存
             TimeOutInfo.set(Url, 0)
             SendInfo.set(Url, 0)
-        }).catch(async e => {
+        }).catch(async () => {
             let out = <number>TimeOutInfo.get(Url)
+            console.log(`连接网址${Url} error,num计数:${out}`);
             // 如果超时次数超过设定值，发送短信
-            if (out > timeOutNum) {
+            if (out > Info.timeOutNum -1) {
                 let SendNum = <number>SendInfo.get(Url)
                 // 如果短信发送次数超过设定值，停止发送
                 if (SendNum < 2) {
-                    const isSend = SendSms(tels.join(","), Url)
+                    console.log(`发送错误to${tels.join(",")}`);
+                    const isSend = SendSms(tels.join(","), Info.UrlName, "error")
                     // 发送成功，发送计数++
                     if (isSend) {
-                        SendInfo.set(Url, SendNum++)
+                        SendNum++
+                        SendInfo.set(Url, SendNum)
                     }
                     TimeOutInfo.set(Url, 0)
+                } else {
+                    out++
+                    TimeOutInfo.set(Url, out)
                 }
             } else {
-                TimeOutInfo.set(Url, out++)
+                out++
+                TimeOutInfo.set(Url, out)
             }
         })
     }, 1000 * 60)
@@ -51,7 +69,7 @@ function InterValPing(Url: string, timeOutNum: number, timeOutSec: number) {
 function start() {
     const sites = WebSites
     sites.forEach(el => {
-        InterValPing(el.Url, el.timeOutNum, el.timeOutSec)
+        InterValPing(el)
     })
 
 }
