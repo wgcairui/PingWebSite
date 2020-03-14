@@ -94,7 +94,7 @@ export const SendSms = async (tels: string, sitename: string, type: alarmType) =
         success: "SMS_185846200",
         error: "SMS_185820818"
     }
-    const time = new Date().toLocaleString().split(" ")[1]
+    const time = new Date().toLocaleTimeString()
     const TemplateParam = JSON.stringify({ sitename: `[${sitename}]`, time })
     console.log(TemplateParam);
     
