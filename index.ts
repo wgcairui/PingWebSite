@@ -32,14 +32,14 @@ function InterValPing(Info: Sites) {
     SendInfo.set(Url, 0)
     const Inter = setInterval(() => {
         axios.get(Url).then(() => {
-            console.log(`连接网址${Url} Success,${new Date().toLocaleString()}`);
+            console.log(`连接网址${Url} Success,########${new Date().toLocaleString()}`);
             if (SendInfo.get(Url) as number > 0) SendSms(tels.join(","), Info.UrlName, "success")
             // 网络联通，清除缓存
             TimeOutInfo.set(Url, 0)
             SendInfo.set(Url, 0)
         }).catch(async () => {
             let out = <number>TimeOutInfo.get(Url)
-            console.log(`连接网址${Url} error,num计数:${out} ,${new Date().toLocaleString()}`);
+            console.log(`连接网址${Url} error,num计数:${out} ,########${new Date().toLocaleString()}`);
             // 如果超时次数超过设定值，发送短信
             if (out > Info.timeOutNum -1) {
                 let SendNum = <number>SendInfo.get(Url)
