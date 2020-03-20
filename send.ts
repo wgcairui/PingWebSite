@@ -1,4 +1,9 @@
-import { isArray } from "util";
+const SimpleNodeLogger = require('simple-node-logger')
+const log = SimpleNodeLogger.createSimpleLogger( {
+    logFilePath:'mylogfile.log',
+    timestampFormat:'YYYY-MM-DD HH:mm:ss.SSS'
+} );
+
 import core from "@alicloud/pop-core"
 const key = require("./key.json")
 
@@ -95,7 +100,8 @@ export const SendSms = async (tels: string, sitename: string, type: alarmType) =
         error: "SMS_185820818"
     }
     const time = new Date()
-    const TemplateParam = JSON.stringify({ sitename: `[${sitename}]`, time })
+    const d = `${time.getFullYear()}/${time.getMonth()+1}/${time.getDate()} ${time.getHours()}:${time.getMinutes()}:${time.getSeconds()}`
+    const TemplateParam = JSON.stringify({ sitename: `[${sitename}]`, time:d })
     console.log(TemplateParam);
     
     const params = {
@@ -105,9 +111,16 @@ export const SendSms = async (tels: string, sitename: string, type: alarmType) =
         "TemplateCode": smsCode[type],
         TemplateParam
     }
-
-    const result: SmsResult = await client.request('SendSms', params, requestOption)
+    log.info(JSON.stringify(params))
+    const result: SmsResult = await client.request('SendSms', params, requestOption).then(el=>{
+        log.info(JSON.stringify(el))
+        return el as any
+    }).catch(e=>{
+        log.warn(JSON.stringify(e))
+        return e
+    })
     console.log(result);
+
 
     if (result.Code === "OK") {
         return true
