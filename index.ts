@@ -19,7 +19,7 @@ const WebSites: Sites[] = [{
     Url:"http://www.ladis.com.cn",
     UrlName:"雷迪司官网",
     timeOutNum:5,
-    tels:["17371676835","13705817726"]
+    tels:["17371676835","13705817726","15337364316"]
 }]
 
 
