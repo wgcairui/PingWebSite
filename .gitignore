@@ -3,3 +3,5 @@ key.json
 node_modules
 
 mylogfile.log
+
+src/*.js
