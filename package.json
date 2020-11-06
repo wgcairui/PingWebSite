@@ -4,13 +4,15 @@
   "description": "检测网站是否正常运行",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node src/index.ts"
+    "start": "cross-env NODE_ENV=production node ./src/index.js",
+    "build:docker":"tsc && sudo docker build -t pingweb . && rm src/*.js",
+    "run:docker":"sudo docker stop pingweb && sudo docker rm pingweb && sudo docker run -itd --name pingweb --restart always --init pingweb"
   },
   "private": true,
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "cross-env": "^7.0.2",
     "@alicloud/pop-core": "^1.7.9",
     "@types/node": "^13.9.0",
     "axios": "^0.19.2",

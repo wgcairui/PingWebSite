@@ -1,12 +1,14 @@
-from keymetrics/pm2:latest-alpine
+FROM node:14-alpine
 
-#
-COPY src src/
-COPY package.json .
-COPY ecosystem.config.js .
+WORKDIR /app
 
-#
+COPY ["package.json", "/app/"]
+
+RUN npm install --registry=https://registry.npm.taobao.org
+
 ENV NPM_CONFIG_LOGLEVEL warn
-RUN npm install  --production --registry=https://registry.npm.taobao.org
+ENV NODE_ENV=production
 
-CMD [ "pm2-runtime", "start", "ecosystem.config.js" ]
+COPY src /app/src
+
+CMD ["npm","run","start"]
