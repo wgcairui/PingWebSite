@@ -4,7 +4,7 @@
   "description": "检测网站是否正常运行",
   "main": "index.js",
   "scripts": {
-    "start": "cross-env NODE_ENV=production node ./src/index.js",
+    "start": "node ./src/index.js",
     "build:docker": "tsc && sudo docker build -t pingweb . && rm src/*.js",
     "run:docker": "sudo docker stop pingweb && sudo docker rm pingweb && sudo docker run -itd --name pingweb --restart always --init pingweb"
   },
