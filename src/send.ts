@@ -100,7 +100,7 @@ export const SendSms = async (tels: string, sitename: string, type: alarmType) =
         error: "SMS_185820818"
     }
     const time = new Date()
-    const d = `${time.getFullYear()}/${time.getMonth()+1}/${time.getDate()} ${time.getHours()+8}:${time.getMinutes()}:${time.getSeconds()}`
+    const d = `${time.getFullYear()}/${time.getMonth()+1}/${time.getDate()} ${time.getHours()}:${time.getMinutes()}:${time.getSeconds()}`
     const TemplateParam = JSON.stringify({ sitename: `[${sitename}]`, time:d })
     console.log(TemplateParam);
     

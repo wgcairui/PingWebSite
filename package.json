@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node ./src/index.js",
     "build:docker": "tsc && sudo docker build -t pingweb . && rm src/*.js",
-    "run:docker": "sudo docker stop pingweb && sudo docker rm pingweb && sudo docker run -itd --name pingweb --restart always --init pingweb"
+    "run:docker": "sudo docker stop pingweb && sudo docker rm pingweb && sudo docker run -itd --name pingweb --restart always --init  -v /etc/localtime:/etc/localtime pingweb"
   },
   "private": true,
   "author": "",
