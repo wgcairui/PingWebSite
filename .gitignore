@@ -1,7 +1,12 @@
-key.json
+# Credentials & site config (never commit)
+src/config.json
 
+# Dependencies
 node_modules
 
+# Logs
+app.log
 mylogfile.log
 
+# Compiled JS (legacy)
 src/*.js

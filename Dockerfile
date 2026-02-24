@@ -1,14 +1,15 @@
-FROM node:14-alpine
+# ── Build stage ──────────────────────────────────────────────────────────────
+FROM m.daocloud.io/docker.io/oven/bun:1-alpine AS base
 
 WORKDIR /app
 
-COPY ["package.json", "/app/"]
+# Copy only what is needed for production (no node_modules – pure Bun)
+COPY package.json ./
+COPY src ./src
 
-RUN npm install --production
-
-ENV NPM_CONFIG_LOGLEVEL warn
+# ── Runtime ───────────────────────────────────────────────────────────────────
 ENV NODE_ENV=production
 
-COPY src /app/src
-
-CMD ["npm","run","start"]
+# Mount the credentials at runtime:
+#   docker run -v /path/to/key.json:/app/src/key.json ...
+CMD ["bun", "run", "src/index.ts"]

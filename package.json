@@ -1,23 +1,16 @@
 {
   "name": "pingwebsite",
-  "version": "1.0.0",
-  "description": "检测网站是否正常运行",
-  "main": "index.js",
-  "scripts": {
-    "start": "node ./src/index.js",
-    "build:docker": "tsc && sudo docker build -t pingweb . && rm src/*.js",
-    "run:docker": "sudo docker stop pingweb && sudo docker rm pingweb && sudo docker run -itd --name pingweb --restart always --init  -v /etc/localtime:/etc/localtime pingweb"
-  },
+  "version": "2.0.0",
+  "description": "Website health monitor – checks if sites are reachable and sends SMS alerts",
+  "module": "src/index.ts",
   "private": true,
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "@alicloud/pop-core": "^1.7.9",
-    "axios": "^0.19.2",
-    "simple-node-logger": "^18.12.24"
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "dev": "bun --watch run src/index.ts",
+    "build:docker": "sudo docker build -t pingweb ."
   },
+  "dependencies": {},
   "devDependencies": {
-    "cross-env": "^7.0.2",
-    "@types/node": "^13.9.0"
+    "bun-types": "^1.3.9"
   }
 }

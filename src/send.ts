@@ -1,132 +1,167 @@
-const SimpleNodeLogger = require('simple-node-logger')
-const log = SimpleNodeLogger.createSimpleLogger( {
-    logFilePath:'mylogfile.log',
-    timestampFormat:'YYYY-MM-DD HH:mm:ss.SSS'
-} );
+import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
+import config from "./config.json";
 
-import core from "@alicloud/pop-core"
-const key = require("./key.json")
+// ─── Logger ──────────────────────────────────────────────────────────────────
 
-interface SmsResult {
-    "Message": string
-    "RequestId": string
-    "BizId": string
-    "Code": string
+const LOG_FILE = path.join(import.meta.dir, "../app.log");
+
+function timestamp(): string {
+  return new Date()
+    .toLocaleString("zh-CN", {
+      timeZone: "Asia/Shanghai",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    })
+    .replace(/\//g, "-");
 }
 
-// 阿里云SMS文档
-// https://api.aliyun.com/?spm=a2c4g.11186623.2.21.79af50a4cYSUsg#/?product=Dysmsapi&version=2017-05-25&api=AddSmsSign&params={%22RegionId%22:%22default%22}&tab=DEMO&lang=NODEJS
+function writeLog(level: "INFO" | "WARN" | "ERROR", message: string): void {
+  const line = `[${timestamp()}] [${level}] ${message}\n`;
+  process.stdout.write(line);
+  fs.appendFileSync(LOG_FILE, line, "utf-8");
+}
 
-const client = new core(
-    {
-        accessKeyId: key.accessKeyId,
-        accessKeySecret: key.accessKeySecret,
-        endpoint: 'https://dysmsapi.aliyuncs.com',
-        apiVersion: '2017-05-25'
-    }
-)
-
-const requestOption = {
-    method: 'POST'
+export const logger = {
+  info: (msg: string) => writeLog("INFO", msg),
+  warn: (msg: string) => writeLog("WARN", msg),
+  error: (msg: string) => writeLog("ERROR", msg),
 };
 
-// 申请签名
-export const AddSmsSign = () => {
-    const params = {
-        "RegionId": "cn-hangzhou",
-        "SignName": "雷迪司科技湖北有限公司",
-        "SignSource": 1,
-        "Remark": "用于监测我司官网主机是否在线，离线发送告警短信"
-    }
+// ─── Aliyun SMS (native fetch, HMAC-SHA1 signed request) ─────────────────────
+// Aliyun OpenAPI docs: https://api.aliyun.com/#/?product=Dysmsapi&version=2017-05-25
 
-    client.request('AddSmsSign', params, requestOption).then(result => {
-        console.log({ AddSmsSign: result });
+const ENDPOINT = "https://dysmsapi.aliyuncs.com";
+const API_VERSION = "2017-05-25";
+const SIGN_NAME = "雷迪司科技湖北有限公司";
+const SMS_CODES = {
+  success: "SMS_185846200",
+  error: "SMS_185820818",
+} as const;
 
-    }).catch(e => {
-        console.log(e);
+type AlarmType = keyof typeof SMS_CODES;
 
-    })
+interface SmsResult {
+  Code: string;
+  Message: string;
+  RequestId: string;
+  BizId?: string;
 }
 
-//查询签名状态
-export const QuerySmsSign = () => {
-    const params = {
-        "RegionId": "cn-hangzhou",
-        "SignName": "雷迪司科技湖北有限公司"
-    }
-    client.request('QuerySmsSign', params, requestOption).then((result) => {
-        console.log({ QuerySmsSign: result });
-    }, (ex) => {
-        console.log(ex);
-    })
+/** Percent-encode a string per RFC 3986 */
+function rfc3986Encode(str: string): string {
+  return encodeURIComponent(str)
+    .replace(/!/g, "%21")
+    .replace(/'/g, "%27")
+    .replace(/\(/g, "%28")
+    .replace(/\)/g, "%29")
+    .replace(/\*/g, "%2A");
 }
 
-
-// 申请模板
-export const AddSmsTemplate = () => {
-    const params = {
-        "RegionId": "cn-hangzhou",
-        "TemplateType": 1,
-        "TemplateName": "网站下线提醒",
-        "TemplateContent": "监测到网站${url}离线，离线时间${time},请尽快处理",
-        "Remark": "监测我司网站离线，以提醒运维处理"
-    }
-    client.request('AddSmsTemplate', params, requestOption).then((result) => {
-        console.log({ AddSmsTemplate: result });
-    }, (ex) => {
-        console.log(ex);
-    })
+/** Build Aliyun-style HMAC-SHA1 signature */
+function sign(params: Record<string, string>, secret: string): string {
+  const sorted = Object.keys(params)
+    .sort()
+    .map((k) => `${rfc3986Encode(k)}=${rfc3986Encode(params[k])}`)
+    .join("&");
+  const stringToSign = `POST&${rfc3986Encode("/")}&${rfc3986Encode(sorted)}`;
+  const hmac = crypto.createHmac("sha1", `${secret}&`);
+  hmac.update(stringToSign);
+  return hmac.digest("base64");
 }
 
-// 查询模板状态
-export const QuerySmsTemplate = () => {
-    var params = {
-        "RegionId": "cn-hangzhou",
-        "TemplateCode": "网站下线提醒"
-    }
+/** Call an Aliyun SMS API action */
+async function callSmsApi(
+  action: string,
+  extra: Record<string, string>
+): Promise<SmsResult> {
+  const nonce = crypto.randomBytes(16).toString("hex");
+  const ts = new Date().toISOString().replace(/\.\d+Z$/, "Z");
 
-    client.request('QuerySmsTemplate', params, requestOption).then((result) => {
-        console.log({ QuerySmsTemplate: result });
-    }, (ex) => {
-        console.log(ex);
-    })
+  const params: Record<string, string> = {
+    Action: action,
+    Version: API_VERSION,
+    Format: "JSON",
+    SignatureMethod: "HMAC-SHA1",
+    SignatureVersion: "1.0",
+    SignatureNonce: nonce,
+    Timestamp: ts,
+    AccessKeyId: config.accessKeyId,
+    RegionId: "cn-hangzhou",
+    ...extra,
+  };
+
+  params.Signature = sign(params, config.accessKeySecret);
+
+  const body = new URLSearchParams(params).toString();
+
+  const resp = await fetch(ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body,
+  });
+
+  if (!resp.ok) {
+    throw new Error(`HTTP ${resp.status}: ${await resp.text()}`);
+  }
+
+  return resp.json() as Promise<SmsResult>;
 }
 
-// 单条发送短信
-type alarmType = "error" | "success"
-export const SendSms = async (tels: string, sitename: string, type: alarmType) => {
-    const smsCode = {
-        success: "SMS_185846200",
-        error: "SMS_185820818"
-    }
-    const time = new Date()
-    const d = `${time.getFullYear()}/${time.getMonth()+1}/${time.getDate()} ${time.getHours()}:${time.getMinutes()}:${time.getSeconds()}`
-    const TemplateParam = JSON.stringify({ sitename: `[${sitename}]`, time:d })
-    console.log(TemplateParam);
-    
-    const params = {
-        "RegionId": "cn-hangzhou",
-        "PhoneNumbers": tels,
-        "SignName": "雷迪司科技湖北有限公司",
-        "TemplateCode": smsCode[type],
-        TemplateParam
-    }
-    log.info(JSON.stringify(params))
-    const result: SmsResult = await client.request('SendSms', params, requestOption).then(el=>{
-        log.info(JSON.stringify(el))
-        return el as any
-    }).catch(e=>{
-        log.warn(JSON.stringify(e))
-        return e
+/**
+ * Send an SMS alert.
+ * @returns true if Aliyun accepted the message (Code === "OK")
+ */
+export async function sendSms(
+  tels: string,
+  sitename: string,
+  type: AlarmType
+): Promise<boolean> {
+  const now = new Date();
+  const dateStr = now
+    .toLocaleString("zh-CN", {
+      timeZone: "Asia/Shanghai",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
     })
-    console.log(result);
+    .replace(/\//g, "-");
 
+  const templateParam = JSON.stringify({
+    sitename: `[${sitename}]`,
+    time: dateStr,
+  });
+
+  const params = {
+    PhoneNumbers: tels,
+    SignName: SIGN_NAME,
+    TemplateCode: SMS_CODES[type],
+    TemplateParam: templateParam,
+  };
+
+  logger.info(`Sending SMS [${type}] → ${tels}  param=${templateParam}`);
+
+  try {
+    const result = await callSmsApi("SendSms", params);
+    logger.info(`SMS result: ${JSON.stringify(result)}`);
 
     if (result.Code === "OK") {
-        return true
-    } else {
-        console.log(result);
-        return false
+      return true;
     }
-
+    logger.warn(`SMS not accepted: ${JSON.stringify(result)}`);
+    return false;
+  } catch (err) {
+    logger.error(`SMS error: ${String(err)}`);
+    return false;
+  }
 }
