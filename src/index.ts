@@ -31,7 +31,7 @@ function InterValPing(Info: Sites) {
     TimeOutInfo.set(Url, 0)
     SendInfo.set(Url, 0)
     const Inter = setInterval(() => {
-        axios.get(Url).then(() => {
+        axios.head(Url).then(() => {
             console.log(`连接网址${Url} Success,########${new Date().toLocaleString()}`);
             if (SendInfo.get(Url) as number > 0) SendSms(tels.join(","), Info.UrlName, "success")
             // 网络联通，清除缓存
@@ -46,7 +46,7 @@ function InterValPing(Info: Sites) {
                 // 如果短信发送次数超过设定值，停止发送
                 if (SendNum < 2) {
                     console.log(`发送错误to${tels.join(",")}`);
-                    const isSend = SendSms(tels.join(","), Info.UrlName, "error")
+                    const isSend = await SendSms(tels.join(","), Info.UrlName, "error")
                     // 发送成功，发送计数++
                     if (isSend) {
                         SendNum++
