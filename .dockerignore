@@ -1,7 +1,8 @@
 node_modules
 .dockerignore
 .gitignore
-src/*.ts
-types
 Dockerfile
 tsconfig.json
+# Test files – not needed at runtime
+src/*.test.ts
+src/test-*.ts
